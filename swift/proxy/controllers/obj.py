@@ -96,6 +96,14 @@ def check_content_type(req):
 
 
 class ObjectControllerRouter(object):
+    '''
+    包含系统中所有的storage policies的处理类。根据policy_type返回相应的处理类。
+    处理类分为，基于副本的处理类和基于纠删码的处理类。
+    两者都是 BaseObjectController 的子类。
+
+    BaseObjectController中针对不同类型的request的有不同的处理方法，包括：
+    GET,HEAD,POST,PUT,DELETE,COPY
+    '''
 
     policy_type_to_controller_map = {}
 

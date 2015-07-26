@@ -1098,6 +1098,7 @@ class GetOrHeadHandler(ResumingGetter):
             update_headers(res, source.getheaders())
             if req.method == 'GET' and \
                     source.status in (HTTP_OK, HTTP_PARTIAL_CONTENT):
+                # res.body 应该是可以使用app_iter形成的。
                 res.app_iter = self._make_app_iter(req, node, source)
                 # See NOTE: swift_conn at top of file about this.
                 res.swift_conn = source.swift_conn

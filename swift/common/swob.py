@@ -1372,6 +1372,8 @@ class Response(object):
         if not self.request:
             self.request = Request(env)
         self.environ = env
+        # 这里的app_iter和_body是别处调用Response时已经形成好的，相当于，别处准备好了所有的数据，并用这些数据合成一个Response类的实例。
+        # 因此，Response中只要根据已有的信息，确定最终返回的形式即可。
         app_iter = self._response_iter(self.app_iter, self._body)
         if 'location' in self.headers and \
                 not env.get('swift.leave_relative_location'):

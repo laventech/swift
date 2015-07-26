@@ -289,6 +289,8 @@ class Application(object):
     def __call__(self, env, start_response):
         """
         这是 proxy server 的入口，上层 middleware 将参数传到这里进入 proxy server 的处理流程。
+        最终返回的时候调用的是 swift.common.swob.Response。
+        在 Response 里会调用 start_response 函数（返回 head），并返回（body）。
 
         WSGI entry point.
         Wraps env in swob.Request object and passes it down.
@@ -300,6 +302,8 @@ class Application(object):
             if self.memcache is None:
                 self.memcache = cache_from_env(env, True)
             req = self.update_request(Request(env))
+            # 下列返回的值中，self.handle_request(req)为一个Response类的实例。
+            # Response类包含方法 __call__(evn,start_response)
             return self.handle_request(req)(env, start_response)
         except UnicodeError:
             err = HTTPPreconditionFailed(
@@ -341,6 +345,8 @@ class Application(object):
                     request=req, body='Invalid UTF8 or contains NULL')
 
             try:
+                # 这里确定controller的类型，根据req的内容分别返回：
+                # account controller，container controller 或者 object controller。
                 controller, path_parts = self.get_controller(req)
                 p = req.path_info
                 if isinstance(p, unicode):
@@ -374,6 +380,8 @@ class Application(object):
             controller.trans_id = req.environ['swift.trans_id']
             self.logger.client_ip = get_remote_client(req)
             try:
+                # 这里的handler是相应controller类中对应于req中方法的方法。
+                # 这些方法包括：GET,HEAD,POST,PUT,DELETE,COPY
                 handler = getattr(controller, req.method)
                 getattr(handler, 'publicly_accessible')
             except AttributeError:
@@ -400,6 +408,16 @@ class Application(object):
             # gets mutated during handling.  This way logging can display the
             # method the client actually sent.
             req.environ['swift.orig_req_method'] = req.method
+            # 这里返回的是相应于req的controller中具体的处理这个类型的req的方法。
+            # 经过层层调用之后，handler(req)其实是一个Response类的实例。
+            # 调用过程为（以get object为例）：
+            # swift.proxy.controllers.ObjectControllerRouter 中找到对应的controller
+            # 在 BaseObjectController 中找到 GET 方法，GET 方法使用 GETorHEAD 方法
+            # GETorHEAD 方法跳到 ReplicatedObjectController 中的 _get_or_head_response 方法
+            # _get_or_head_response 使用 swift.proxy.controller.Controller(base.py)中的 GETorHEAD_base 方法
+            # GETorHEAD_base 中调用 GetOrHeadHandler 类中的 get_working_response 方法
+            # get_working_response 方法构建一个 Response 类的实例，并返回。
+            # 这个 Response 类的实例就是这里被返回的值。
             return handler(req)
         except HTTPException as error_response:
             return error_response
