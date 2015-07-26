@@ -288,6 +288,8 @@ class Application(object):
 
     def __call__(self, env, start_response):
         """
+        这是 proxy server 的入口，上层 middleware 将参数传到这里进入 proxy server 的处理流程。
+
         WSGI entry point.
         Wraps env in swob.Request object and passes it down.
 
