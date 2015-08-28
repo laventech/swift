@@ -20,4 +20,8 @@ from swift.common.wsgi import run_wsgi
 
 if __name__ == '__main__':
     conf_file, options = parse_options()
+    # 在这里启动wsgi的server。
+    # wsgi的server会接收请求
+    # 并且按照配置文件中的定义顺序调用middlewares和对应的server应用。
+    # wsgi的server的代码在 swift/common/wsgi.py 中。
     sys.exit(run_wsgi(conf_file, 'proxy-server', **options))

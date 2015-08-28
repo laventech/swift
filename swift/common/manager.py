@@ -212,6 +212,7 @@ class Manager(object):
         status = 0
 
         for server in self.servers:
+            # 启动swift-init命令中指定的server（例如，proxy-server）。
             server.launch(**kwargs)
         if not kwargs.get('daemon', True):
             for server in self.servers:
@@ -599,6 +600,8 @@ class Server(object):
         :param daemon: boolean, if false ask server to log to console
 
         :returns : the pid of the spawned process
+        
+        swift用于启动多进程的方法是，使用subprocess库，而不是multiprocessing库。
         """
         args = [self.cmd, conf_file]
         if once:
@@ -619,6 +622,9 @@ class Server(object):
                 re_out = subprocess.PIPE
             else:
                 re_out = open(os.devnull, 'w+b')
+        # 启动server进程的方式是直接使用subprocess执行命令行程序。
+        # 例如，启动proxy-server的命令是： “swift-proxy-server conf_file”
+        # 这些命令行程序在 bin 目录下
         proc = subprocess.Popen(args, stdout=re_out, stderr=re_err)
         pid_file = self.get_pid_file_name(conf_file)
         write_file(pid_file, proc.pid)
@@ -671,6 +677,7 @@ class Server(object):
 
         pids = self.get_running_pids(**kwargs)
 
+        # 以下代码用于判断需要启动的server是不是已经被启动了。
         already_started = False
         for pid, pid_file in pids.items():
             conf_file = self.get_conf_file_name(pid_file)
@@ -701,6 +708,7 @@ class Server(object):
                 msg = _('Starting %s') % self.server
             print('%s...(%s)' % (msg, conf_file))
             try:
+                # 如果没有启动，在这里启动。
                 pid = self.spawn(conf_file, **kwargs)
             except OSError as e:
                 if e.errno == errno.ENOENT:

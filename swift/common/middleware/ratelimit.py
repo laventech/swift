@@ -287,6 +287,8 @@ class RateLimitMiddleware(object):
         """
         req = Request(env)
         if self.memcache_client is None:
+            # 在pipline中memcache middleware应该在前面
+            # memcache为每一个请求建立一个memcache client，并把这个client放入env中
             self.memcache_client = cache_from_env(env)
         if not self.memcache_client:
             self.logger.warning(
@@ -297,9 +299,13 @@ class RateLimitMiddleware(object):
         except ValueError:
             return self.app(env, start_response)
         ratelimit_resp = self.handle_ratelimit(req, account, container, obj)
+        # ratelimit_resp 为 None 或者 Response 对象，Response 对象是可调用的。
+        # ratelimit 操作正常执行，或者不需要执行，返回 None，接着向下调用。
         if ratelimit_resp is None:
             return self.app(env, start_response)
         else:
+            # ratelimit 执行失败，或者需要返回错误信息，返回 Response 对象。
+            # 不用向下调用，直接返回。
             return ratelimit_resp(env, start_response)
 
 
