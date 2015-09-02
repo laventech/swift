@@ -23,6 +23,11 @@ from swift.common.memcached import (MemcacheRing, CONN_TIMEOUT, POOL_TIMEOUT,
 class MemcacheMiddleware(object):
     """
     Caching middleware that manages caching in swift.
+    
+    swift 自己实现的 memcache_client 目的是为了减少与 memcache_servers 之间连接的数量。
+    即，多个 memcache_clients 共享到同一个 memcache_servers 的连接。
+    其中，所有的 memcache_servers 被当作一个整体的集群使用。即，根据 key 的哈希值决定
+    key 对应的数据在哪一个 memcache_server 上。而不是自由指定将数据放在哪里。
     """
 
     def __init__(self, app, conf):
