@@ -43,6 +43,7 @@ from swift.common.exceptions import APIVersionError
 
 
 
+
 # List of entry points for mandatory middlewares.
 #
 # Fields:
@@ -288,9 +289,9 @@ class Application(object):
 
     def __call__(self, env, start_response):
         """
-        ÕâÊÇ proxy server µÄÈë¿Ú£¬ÉÏ²ã middleware ½«²ÎÊı´«µ½ÕâÀï½øÈë proxy server µÄ´¦ÀíÁ÷³Ì¡£
-+       ×îÖÕ·µ»ØµÄÊ±ºòµ÷ÓÃµÄÊÇ swift.common.swob.Response¡£
-+       ÔÚ Response Àï»áµ÷ÓÃ start_response º¯Êı£¨·µ»Ø head£©£¬²¢·µ»Ø£¨body£©¡£
+        è¿™æ˜¯ proxy server çš„å…¥å£ï¼Œä¸Šå±‚ middleware å°†å‚æ•°ä¼ åˆ°è¿™é‡Œè¿›å…¥ proxy server çš„å¤„ç†æµç¨‹ã€‚
++       æœ€ç»ˆè¿”å›çš„æ—¶å€™è°ƒç”¨çš„æ˜¯ swift.common.swob.Responseã€‚
++       åœ¨ Response é‡Œä¼šè°ƒç”¨ start_response å‡½æ•°ï¼ˆè¿”å› headï¼‰ï¼Œå¹¶è¿”å›ï¼ˆbodyï¼‰ã€‚
 
         WSGI entry point.
         Wraps env in swob.Request object and passes it down.
@@ -302,8 +303,8 @@ class Application(object):
             if self.memcache is None:
                 self.memcache = cache_from_env(env, True)
             req = self.update_request(Request(env))
-            # ÏÂÁĞ·µ»ØµÄÖµÖĞ£¬self.handle_request(req)ÎªÒ»¸öResponseÀàµÄÊµÀı¡£
-            # ResponseÀà°üº¬·½·¨ __call__(evn,start_response)
+            # ä¸‹åˆ—è¿”å›çš„å€¼ä¸­ï¼Œself.handle_request(req)ä¸ºä¸€ä¸ªResponseç±»çš„å®ä¾‹ã€‚
+            # Responseç±»åŒ…å«æ–¹æ³• __call__(evn,start_response)
             return self.handle_request(req)(env, start_response)
         except UnicodeError:
             err = HTTPPreconditionFailed(
@@ -345,8 +346,8 @@ class Application(object):
                     request=req, body='Invalid UTF8 or contains NULL')
 
             try:
-                # ÕâÀïÈ·¶¨controllerµÄÀàĞÍ£¬¸ù¾İreqµÄÄÚÈİ·Ö±ğ·µ»Ø£º
-                # account controller£¬container controller »òÕß object controller¡£
+                # è¿™é‡Œç¡®å®šcontrollerçš„ç±»å‹ï¼Œæ ¹æ®reqçš„å†…å®¹åˆ†åˆ«è¿”å›ï¼š
+                # account controllerï¼Œcontainer controller æˆ–è€… object controllerã€‚
                 controller, path_parts = self.get_controller(req)
                 p = req.path_info
                 if isinstance(p, unicode):
@@ -380,8 +381,8 @@ class Application(object):
             controller.trans_id = req.environ['swift.trans_id']
             self.logger.client_ip = get_remote_client(req)
             try:
-                # ÕâÀïµÄhandlerÊÇÏàÓ¦controllerÀàÖĞ¶ÔÓ¦ÓÚreqÖĞ·½·¨µÄ·½·¨¡£
-                # ÕâĞ©·½·¨°üÀ¨£ºGET,HEAD,POST,PUT,DELETE,COPY
+                # è¿™é‡Œçš„handleræ˜¯ç›¸åº”controllerç±»ä¸­å¯¹åº”äºreqä¸­æ–¹æ³•çš„æ–¹æ³•ã€‚
+                # è¿™äº›æ–¹æ³•åŒ…æ‹¬ï¼šGET,HEAD,POST,PUT,DELETE,COPY
                 handler = getattr(controller, req.method)
                 getattr(handler, 'publicly_accessible')
             except AttributeError:
@@ -408,16 +409,16 @@ class Application(object):
             # gets mutated during handling.  This way logging can display the
             # method the client actually sent.
             req.environ['swift.orig_req_method'] = req.method
-            # ÕâÀï·µ»ØµÄÊÇÏàÓ¦ÓÚreqµÄcontrollerÖĞ¾ßÌåµÄ´¦ÀíÕâ¸öÀàĞÍµÄreqµÄ·½·¨¡£
-            # ¾­¹ı²ã²ãµ÷ÓÃÖ®ºó£¬handler(req)ÆäÊµÊÇÒ»¸öResponseÀàµÄÊµÀı¡£
-            # µ÷ÓÃ¹ı³ÌÎª£¨ÒÔget objectÎªÀı£©£º
-            # swift.proxy.controllers.ObjectControllerRouter ÖĞÕÒµ½¶ÔÓ¦µÄcontroller
-            # ÔÚ BaseObjectController ÖĞÕÒµ½ GET ·½·¨£¬GET ·½·¨Ê¹ÓÃ GETorHEAD ·½·¨
-            # GETorHEAD ·½·¨Ìøµ½ ReplicatedObjectController ÖĞµÄ _get_or_head_response ·½·¨
-            # _get_or_head_response Ê¹ÓÃ swift.proxy.controller.Controller(base.py)ÖĞµÄ GETorHEAD_base ·½·¨
-            # GETorHEAD_base ÖĞµ÷ÓÃ GetOrHeadHandler ÀàÖĞµÄ get_working_response ·½·¨
-            # get_working_response ·½·¨¹¹½¨Ò»¸ö Response ÀàµÄÊµÀı£¬²¢·µ»Ø¡£
-            # Õâ¸ö Response ÀàµÄÊµÀı¾ÍÊÇÕâÀï±»·µ»ØµÄÖµ¡£
+            # è¿™é‡Œè¿”å›çš„æ˜¯ç›¸åº”äºreqçš„controllerä¸­å…·ä½“çš„å¤„ç†è¿™ä¸ªç±»å‹çš„reqçš„æ–¹æ³•ã€‚
+            # ç»è¿‡å±‚å±‚è°ƒç”¨ä¹‹åï¼Œhandler(req)å…¶å®æ˜¯ä¸€ä¸ªResponseç±»çš„å®ä¾‹ã€‚
+            # è°ƒç”¨è¿‡ç¨‹ä¸ºï¼ˆä»¥get objectä¸ºä¾‹ï¼‰ï¼š
+            # swift.proxy.controllers.ObjectControllerRouter ä¸­æ‰¾åˆ°å¯¹åº”çš„controller
+            # åœ¨ BaseObjectController ä¸­æ‰¾åˆ° GET æ–¹æ³•ï¼ŒGET æ–¹æ³•ä½¿ç”¨ GETorHEAD æ–¹æ³•
+            # GETorHEAD æ–¹æ³•è·³åˆ° ReplicatedObjectController ä¸­çš„ _get_or_head_response æ–¹æ³•
+            # _get_or_head_response ä½¿ç”¨ swift.proxy.controller.Controller(base.py)ä¸­çš„ GETorHEAD_base æ–¹æ³•
+            # GETorHEAD_base ä¸­è°ƒç”¨ GetOrHeadHandler ç±»ä¸­çš„ get_working_response æ–¹æ³•
+            # get_working_response æ–¹æ³•æ„å»ºä¸€ä¸ª Response ç±»çš„å®ä¾‹ï¼Œå¹¶è¿”å›ã€‚
+            # è¿™ä¸ª Response ç±»çš„å®ä¾‹å°±æ˜¯è¿™é‡Œè¢«è¿”å›çš„å€¼ã€‚
             return handler(req)
         except HTTPException as error_response:
             return error_response
