@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2012 OpenStack Foundation
+ï»¿# Copyright (c) 2010-2012 OpenStack Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -756,7 +756,7 @@ class ResumingGetter(object):
         return it
 
     def _get_response_parts_iter(self, req, node, source):
-        # ÕæÕı»ñÈ¡Êı¾İµÄµØ·½
+        # çœŸæ­£è·å–æ•°æ®çš„åœ°æ–¹
         # Someday we can replace this [mess] with python 3's "nonlocal"
         source = [source]
         node = [node]
@@ -787,8 +787,8 @@ class ResumingGetter(object):
                         with ChunkReadTimeout(node_timeout):
                             # if StopIteration is raised, it escapes and is
                             # handled elsewhere
-                            # ÕâÀïµÄpart»¹ÊÇhttplib.Response¶ÔÏó¡£
-                            # iter_bytes_from_response_part Ê¹ÓÃpart»ñÈ¡Êı¾İ¡£
+                            # è¿™é‡Œçš„partè¿˜æ˜¯httplib.Responseå¯¹è±¡ã€‚
+                            # iter_bytes_from_response_part ä½¿ç”¨partè·å–æ•°æ®ã€‚
                             start_byte, end_byte, length, headers, part = next(
                                 parts_iter[0])
                         return (start_byte, end_byte, length, headers, part)
@@ -812,14 +812,14 @@ class ResumingGetter(object):
                             raise StopIteration()
 
             def iter_bytes_from_response_part(part_file):
-                # Ö´ĞĞ¶ÁÊı¾İµÄ²Ù×÷£¬ part_fileÊÇhttplib.Response¶ÔÏó
+                # æ‰§è¡Œè¯»æ•°æ®çš„æ“ä½œï¼Œ part_fileæ˜¯httplib.Responseå¯¹è±¡
                 nchunks = 0
                 buf = ''
                 bytes_used_from_backend = 0
                 while True:
-                    # ÒÔ self.app.object_chunk_size Îªµ¥Î»Ñ­»·´ÓpartÖĞ¶ÁÊı¾İ£¬²¢°ÑÊı¾İ·ÅÈëbuf
-                    # Ñ­»·µÄÖÕÖ¹ÔÚelseÓï¾ä¿éÖĞ£¨try:except:else£©
-                    # ÕâÊÇ¸öÉú³ÉÆ÷£¬²»¶ÏÊä³öbuf
+                    # ä»¥ self.app.object_chunk_size ä¸ºå•ä½å¾ªç¯ä»partä¸­è¯»æ•°æ®ï¼Œå¹¶æŠŠæ•°æ®æ”¾å…¥buf
+                    # å¾ªç¯çš„ç»ˆæ­¢åœ¨elseè¯­å¥å—ä¸­ï¼ˆtry:except:elseï¼‰
+                    # è¿™æ˜¯ä¸ªç”Ÿæˆå™¨ï¼Œä¸æ–­è¾“å‡ºbuf
                     try:
                         with ChunkReadTimeout(node_timeout):
                             chunk = part_file.read(self.app.object_chunk_size)
@@ -922,9 +922,9 @@ class ResumingGetter(object):
                         get_next_doc_part()
                     self.learn_size_from_content_range(
                         start_byte, end_byte, length)
-                    # part_iter ¾ÍÊÇÊı¾İÁË
+                    # part_iter å°±æ˜¯æ•°æ®äº†
                     part_iter = iter_bytes_from_response_part(part)
-                    # ÕâÒ²ÊÇ¸öÉú³ÉÆ÷£¬½«Êı¾İ½øÒ»²½°ü×°ºóÊä³ö
+                    # è¿™ä¹Ÿæ˜¯ä¸ªç”Ÿæˆå™¨ï¼Œå°†æ•°æ®è¿›ä¸€æ­¥åŒ…è£…åè¾“å‡º
                     yield {'start_byte': start_byte, 'end_byte': end_byte,
                            'entity_length': length, 'headers': headers,
                            'part_iter': part_iter}
@@ -990,9 +990,9 @@ class ResumingGetter(object):
                 self.app.set_node_timing(node, time.time() - start_node_timing)
 
                 with Timeout(node_timeout):
-                    # possible_sourceÊÇÒ»¸ö bufferedhttp response object£¬Õâ¸ö¶ÔÏó°üº¬ÁË¸÷ÖÖÔªÊı¾İĞÅÏ¢£¨°üÀ¨×î½üÊı¾İ×î½üĞŞ¸ÄµÄÊ±¼ä´Á£©
-                    # proxy-server µÄ¹¤×÷Ä£Ê½ÊÇ£¨µ±Éè¶¨X-NewestÎªTrueÊ±£¬¶ÁÈ¡¶à·İÊı¾İ·µ»Ø×îĞÂ°æ±¾µÄÊı¾İ£©£º
-                    # Í¨¹ı»ñÈ¡¶à¸öÊı¾İ¸±±¾µÄÔªÊı¾İĞÅÏ¢£¬È»ºóÕÒ³ö×îĞÂµÄÊı¾İ¸±±¾£¬¶ÁÈ¡×îĞÂµÄÊı¾İ¸±±¾²¢·µ»Ø¡£
+                    # possible_sourceæ˜¯ä¸€ä¸ª bufferedhttp response objectï¼Œè¿™ä¸ªå¯¹è±¡åŒ…å«äº†å„ç§å…ƒæ•°æ®ä¿¡æ¯ï¼ˆåŒ…æ‹¬æœ€è¿‘æ•°æ®æœ€è¿‘ä¿®æ”¹çš„æ—¶é—´æˆ³ï¼‰
+                    # proxy-server çš„å·¥ä½œæ¨¡å¼æ˜¯ï¼ˆå½“è®¾å®šX-Newestä¸ºTrueæ—¶ï¼Œè¯»å–å¤šä»½æ•°æ®è¿”å›æœ€æ–°ç‰ˆæœ¬çš„æ•°æ®ï¼‰ï¼š
+                    # é€šè¿‡è·å–å¤šä¸ªæ•°æ®å‰¯æœ¬çš„å…ƒæ•°æ®ä¿¡æ¯ï¼Œç„¶åæ‰¾å‡ºæœ€æ–°çš„æ•°æ®å‰¯æœ¬ï¼Œè¯»å–æœ€æ–°çš„æ•°æ®å‰¯æœ¬å¹¶è¿”å›ã€‚
                     possible_source = conn.getresponse()
                     # See NOTE: swift_conn at top of file about this.
                     possible_source.swift_conn = conn
@@ -1030,8 +1030,8 @@ class ResumingGetter(object):
                     self.bodies.append('')
                     self.source_headers.append(possible_source.getheaders())
                     sources.append((possible_source, node))
-                    # Èç¹ûÔÚÇëÇóµÄheaderÖĞÃ»ÓĞÖ¸¶¨x-newestÎªtrue£¬ÔòÖ»¶ÁÒ»¸ö¸±±¾£¬·ñÔò¶Á¶à¸ö¸±±¾ÒÔ±£Ö¤¶Áµ½×îĞÂµÄÊı¾İ
-                    # Òò´ËÔÚÕâÀï£¬self.newest ÈôÎª False£¬ÔòÔÚÕÒµ½Ò»¸ögood sourceÖ®ºóÌø³öÑ­»·£¬sourcesÖĞÖ»ÓĞÒ»¸öÔªËØ
+                    # å¦‚æœåœ¨è¯·æ±‚çš„headerä¸­æ²¡æœ‰æŒ‡å®šx-newestä¸ºtrueï¼Œåˆ™åªè¯»ä¸€ä¸ªå‰¯æœ¬ï¼Œå¦åˆ™è¯»å¤šä¸ªå‰¯æœ¬ä»¥ä¿è¯è¯»åˆ°æœ€æ–°çš„æ•°æ®
+                    # å› æ­¤åœ¨è¿™é‡Œï¼Œself.newest è‹¥ä¸º Falseï¼Œåˆ™åœ¨æ‰¾åˆ°ä¸€ä¸ªgood sourceä¹‹åè·³å‡ºå¾ªç¯ï¼Œsourcesä¸­åªæœ‰ä¸€ä¸ªå…ƒç´ 
                     # self.is_good_source(possible_source)
                     if not self.newest:  # one good source is enough
                         break
@@ -1051,13 +1051,13 @@ class ResumingGetter(object):
                          'type': self.server_type})
 
         if sources:
-            # ÕâÀïÅÅĞòÄÜ¹»Ñ¡³ö×îĞÂµÄÊı¾İ£¬ÒòÎªÔÚhttp responseµÄheaderÖĞÒÑ¾­°üº¬Êı¾İµÄÊ±¼ä´ÁĞÅÏ¢
-            # source_keyµÄ·µ»ØÖµÎª£º
+            # è¿™é‡Œæ’åºèƒ½å¤Ÿé€‰å‡ºæœ€æ–°çš„æ•°æ®ï¼Œå› ä¸ºåœ¨http responseçš„headerä¸­å·²ç»åŒ…å«æ•°æ®çš„æ—¶é—´æˆ³ä¿¡æ¯
+            # source_keyçš„è¿”å›å€¼ä¸ºï¼š
             # return Timestamp(resp.getheader('x-backend-timestamp') or
             # resp.getheader('x-put-timestamp') or
             # resp.getheader('x-timestamp') or 0)
             sources.sort(key=lambda s: source_key(s[0]))
-            # »ñÈ¡×îĞÂµÄresponse£¬sourceÎª×îĞÂÖµËù¶ÔÓ¦µÄÁ¬½Ó£¬nodeÎª×îĞÂÖµËùÔÚ½Úµã
+            # è·å–æœ€æ–°çš„responseï¼Œsourceä¸ºæœ€æ–°å€¼æ‰€å¯¹åº”çš„è¿æ¥ï¼Œnodeä¸ºæœ€æ–°å€¼æ‰€åœ¨èŠ‚ç‚¹
             source, node = sources.pop()
             for src, _junk in sources:
                 close_swift_conn(src)
@@ -1068,7 +1068,7 @@ class ResumingGetter(object):
             self.used_source_etag = src_headers.get(
                 'x-object-sysmeta-ec-etag',
                 src_headers.get('etag', '')).strip('"')
-            # ×îºó·µ»ØµÄ»¹ÊÇÒ»¸öresponse¶ÔÏóºÍÒ»¸ö½Úµã¡£
+            # æœ€åè¿”å›çš„è¿˜æ˜¯ä¸€ä¸ªresponseå¯¹è±¡å’Œä¸€ä¸ªèŠ‚ç‚¹ã€‚
             return source, node
         return None, None
 
@@ -1111,8 +1111,8 @@ class GetOrHeadHandler(ResumingGetter):
             boundary, is_multipart, self.app.logger)
 
     def get_working_response(self, req):
-        # ²âÊÔnode_iterÖĞµÄnodes£¬ÕÒ³öÄÜ¹»Õı³£¹¤×÷µÄnodes£¬·µ»ØÆäÖĞÒ»¸önode£¬¼°½¨Á¢µÄÏàÓ¦ HTTP Á¬½Ó£¨source£©¡£
-        # source Îª httplib.Response£¬ Æä°üº¬read·½·¨¡£
+        # æµ‹è¯•node_iterä¸­çš„nodesï¼Œæ‰¾å‡ºèƒ½å¤Ÿæ­£å¸¸å·¥ä½œçš„nodesï¼Œè¿”å›å…¶ä¸­ä¸€ä¸ªnodeï¼ŒåŠå»ºç«‹çš„ç›¸åº” HTTP è¿æ¥ï¼ˆsourceï¼‰ã€‚
+        # source ä¸º httplib.Responseï¼Œ å…¶åŒ…å«readæ–¹æ³•ã€‚
         source, node = self._get_source_and_node()
         res = None
         if source:
@@ -1121,8 +1121,8 @@ class GetOrHeadHandler(ResumingGetter):
             update_headers(res, source.getheaders())
             if req.method == 'GET' and \
                     source.status in (HTTP_OK, HTTP_PARTIAL_CONTENT):
-                # res.body Ó¦¸ÃÊÇ¿ÉÒÔÊ¹ÓÃapp_iterĞÎ³ÉµÄ¡£
-                # ÔÚÕâÀïĞÎ³ÉÓÃÓÚÏìÓ¦ÇëÇóµÄÊı¾İ¡£Êı¾İ´ÓÉÏÊö²â³öµÄ¿ÉÓÃµÄnode¼°ÆäHTTPÁ¬½ÓÉú³É¡£
+                # res.body åº”è¯¥æ˜¯å¯ä»¥ä½¿ç”¨app_iterå½¢æˆçš„ã€‚
+                # åœ¨è¿™é‡Œå½¢æˆç”¨äºå“åº”è¯·æ±‚çš„æ•°æ®ã€‚æ•°æ®ä»ä¸Šè¿°æµ‹å‡ºçš„å¯ç”¨çš„nodeåŠå…¶HTTPè¿æ¥ç”Ÿæˆã€‚
                 res.app_iter = self._make_app_iter(req, node, source)
                 # See NOTE: swift_conn at top of file about this.
                 res.swift_conn = source.swift_conn
@@ -1543,11 +1543,11 @@ class Controller(object):
         handler = GetOrHeadHandler(self.app, req, self.server_type, node_iter,
                                    partition, path, backend_headers,
                                    client_chunk_size=client_chunk_size)
-        # Ö»´ÓÒ»¸ö½Úµã¶ÁÈ¡Êı¾İ
+        # åªä»ä¸€ä¸ªèŠ‚ç‚¹è¯»å–æ•°æ®
         res = handler.get_working_response(req)
 
         if not res:
-            # Èç¹û²»ÄÜ»ñµÃÇëÇóµÄÏìÓ¦£¬ÔòÊ¹ÓÃbest_response»ñÈ¡Ò»¸öÏìÓ¦¡£
+            # å¦‚æœä¸èƒ½è·å¾—è¯·æ±‚çš„å“åº”ï¼Œåˆ™ä½¿ç”¨best_responseè·å–ä¸€ä¸ªå“åº”ã€‚
             res = self.best_response(
                 req, handler.statuses, handler.reasons, handler.bodies,
                 '%s %s' % (server_type, req.method),
