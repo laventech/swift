@@ -30,12 +30,11 @@ import functools
 import inspect
 import operator
 from sys import exc_info
-from swift import gettext_ as _
 from urllib import quote
 
+from swift import gettext_ as _
 from eventlet import sleep
 from eventlet.timeout import Timeout
-
 from swift.common.wsgi import make_pre_authed_env
 from swift.common.utils import Timestamp, config_true_value, \
     public, split_path, list_from_csv, GreenthreadSafeIterator, \
@@ -757,6 +756,7 @@ class ResumingGetter(object):
         return it
 
     def _get_response_parts_iter(self, req, node, source):
+        # 真正获取数据的地方
         # Someday we can replace this [mess] with python 3's "nonlocal"
         source = [source]
         node = [node]
@@ -787,6 +787,8 @@ class ResumingGetter(object):
                         with ChunkReadTimeout(node_timeout):
                             # if StopIteration is raised, it escapes and is
                             # handled elsewhere
+                            # 这里的part还是httplib.Response对象。
+                            # iter_bytes_from_response_part 使用part获取数据。
                             start_byte, end_byte, length, headers, part = next(
                                 parts_iter[0])
                         return (start_byte, end_byte, length, headers, part)
@@ -810,10 +812,14 @@ class ResumingGetter(object):
                             raise StopIteration()
 
             def iter_bytes_from_response_part(part_file):
+                # 执行读数据的操作， part_file是httplib.Response对象
                 nchunks = 0
                 buf = ''
                 bytes_used_from_backend = 0
                 while True:
+                    # 以 self.app.object_chunk_size 为单位循环从part中读数据，并把数据放入buf
+                    # 循环的终止在else语句块中（try:except:else）
+                    # 这是个生成器，不断输出buf
                     try:
                         with ChunkReadTimeout(node_timeout):
                             chunk = part_file.read(self.app.object_chunk_size)
@@ -916,7 +922,9 @@ class ResumingGetter(object):
                         get_next_doc_part()
                     self.learn_size_from_content_range(
                         start_byte, end_byte, length)
+                    # part_iter 就是数据了
                     part_iter = iter_bytes_from_response_part(part)
+                    # 这也是个生成器，将数据进一步包装后输出
                     yield {'start_byte': start_byte, 'end_byte': end_byte,
                            'entity_length': length, 'headers': headers,
                            'part_iter': part_iter}
@@ -982,6 +990,9 @@ class ResumingGetter(object):
                 self.app.set_node_timing(node, time.time() - start_node_timing)
 
                 with Timeout(node_timeout):
+                    # possible_source是一个 bufferedhttp response object，这个对象包含了各种元数据信息（包括最近数据最近修改的时间戳）
+                    # proxy-server 的工作模式是（当设定X-Newest为True时，读取多份数据返回最新版本的数据）：
+                    # 通过获取多个数据副本的元数据信息，然后找出最新的数据副本，读取最新的数据副本并返回。
                     possible_source = conn.getresponse()
                     # See NOTE: swift_conn at top of file about this.
                     possible_source.swift_conn = conn
@@ -1019,6 +1030,9 @@ class ResumingGetter(object):
                     self.bodies.append('')
                     self.source_headers.append(possible_source.getheaders())
                     sources.append((possible_source, node))
+                    # 如果在请求的header中没有指定x-newest为true，则只读一个副本，否则读多个副本以保证读到最新的数据
+                    # 因此在这里，self.newest 若为 False，则在找到一个good source之后跳出循环，sources中只有一个元素
+                    # self.is_good_source(possible_source)
                     if not self.newest:  # one good source is enough
                         break
             else:
@@ -1037,7 +1051,13 @@ class ResumingGetter(object):
                          'type': self.server_type})
 
         if sources:
+            # 这里排序能够选出最新的数据，因为在http response的header中已经包含数据的时间戳信息
+            # source_key的返回值为：
+            # return Timestamp(resp.getheader('x-backend-timestamp') or
+            # resp.getheader('x-put-timestamp') or
+            # resp.getheader('x-timestamp') or 0)
             sources.sort(key=lambda s: source_key(s[0]))
+            # 获取最新的response，source为最新值所对应的连接，node为最新值所在节点
             source, node = sources.pop()
             for src, _junk in sources:
                 close_swift_conn(src)
@@ -1048,6 +1068,7 @@ class ResumingGetter(object):
             self.used_source_etag = src_headers.get(
                 'x-object-sysmeta-ec-etag',
                 src_headers.get('etag', '')).strip('"')
+            # 最后返回的还是一个response对象和一个节点。
             return source, node
         return None, None
 
@@ -1090,6 +1111,8 @@ class GetOrHeadHandler(ResumingGetter):
             boundary, is_multipart, self.app.logger)
 
     def get_working_response(self, req):
+        # 测试node_iter中的nodes，找出能够正常工作的nodes，返回其中一个node，及建立的相应 HTTP 连接（source）。
+        # source 为 httplib.Response， 其包含read方法。
         source, node = self._get_source_and_node()
         res = None
         if source:
@@ -1099,6 +1122,7 @@ class GetOrHeadHandler(ResumingGetter):
             if req.method == 'GET' and \
                     source.status in (HTTP_OK, HTTP_PARTIAL_CONTENT):
                 # res.body 应该是可以使用app_iter形成的。
+                # 在这里形成用于响应请求的数据。数据从上述测出的可用的node及其HTTP连接生成。
                 res.app_iter = self._make_app_iter(req, node, source)
                 # See NOTE: swift_conn at top of file about this.
                 res.swift_conn = source.swift_conn
@@ -1519,9 +1543,11 @@ class Controller(object):
         handler = GetOrHeadHandler(self.app, req, self.server_type, node_iter,
                                    partition, path, backend_headers,
                                    client_chunk_size=client_chunk_size)
+        # 只从一个节点读取数据
         res = handler.get_working_response(req)
 
         if not res:
+            # 如果不能获得请求的响应，则使用best_response获取一个响应。
             res = self.best_response(
                 req, handler.statuses, handler.reasons, handler.bodies,
                 '%s %s' % (server_type, req.method),
