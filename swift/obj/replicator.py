@@ -40,6 +40,9 @@ from swift.obj import ssync_sender
 from swift.obj.diskfile import (DiskFileManager, get_hashes, get_data_dir,
                                 get_tmp_dir)
 from swift.common.storage_policy import POLICIES, REPL_POLICY
+# POLICIES 为 StoragePolicySingleton
+# 但是 StoragePolicySingleton 实际上只是将 storage_policy 中的_POLICIES 进行包装
+# _POLICIES 是 StoragePolicyCollection
 
 
 hubs.use_hub(get_hub())
@@ -644,6 +647,7 @@ class ObjectReplicator(Daemon):
         self.logger.info(_("Starting object replicator in daemon mode."))
         # Run the replicator continually
         while True:
+            # 现在要确定，POLICIES 的值更新的触发条件。
             start = time.time()
             self.logger.info(_("Starting object replication pass."))
             # Run the replicator

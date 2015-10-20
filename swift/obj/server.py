@@ -683,6 +683,8 @@ class ObjectController(BaseStorageServer):
     @timing_stats()
     def GET(self, request):
         """Handle HTTP GET requests for the Swift Object Server."""
+        # device 和 partition 包含在从proxy发送过来的请求中。
+        # 因此，根据用户发送的请求计算node，device，partition的过程由proxy server执行。
         device, partition, account, container, obj, policy = \
             get_name_and_placement(request, 5, 5, True)
         keep_cache = self.keep_cache_private or (

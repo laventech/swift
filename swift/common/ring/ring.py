@@ -32,7 +32,11 @@ from six.moves import range
 from swift.common.utils import hash_path, validate_configuration, json
 from swift.common.ring.utils import tiers_for_dev
 
-
+# 使用 RingData 的静态方法 descrialize_v1 从ring文件转换为一个dict。
+# 使用上述dict中的数据，创建 RingData 实例。
+# 所有加载ring的方法都是类方法（静态方法）。
+# 因此使用的时候不用先使用init方法创建类的实例。
+# 重新创建一个ring的方法也很简单，使用自己的值初始化一个RingData的类，save。
 class RingData(object):
     """Partitioned consistent hashing ring data (used for serialization)."""
 
@@ -71,6 +75,7 @@ class RingData(object):
 
         partition_count = 1 << (32 - ring_dict['part_shift'])
         for x in range(ring_dict['replica_count']):
+            # 在这里创建了所有的 parttions 的一个 replica 对应的到dev的映射数组。
             ring_dict['replica2part2dev_id'].append(
                 array.array('H', gz_file.read(2 * partition_count)))
         return ring_dict
