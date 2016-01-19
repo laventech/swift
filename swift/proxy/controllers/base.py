@@ -24,22 +24,18 @@
 #   These shenanigans are to ensure all related objects can be garbage
 # collected. We've seen objects hang around forever otherwise.
 
-import os
-import time
 import functools
 import inspect
 import operator
+import os
+import time
 from sys import exc_info
 from urllib import quote
 
-from swift import gettext_ as _
 from eventlet import sleep
 from eventlet.timeout import Timeout
-from swift.common.wsgi import make_pre_authed_env
-from swift.common.utils import Timestamp, config_true_value, \
-    public, split_path, list_from_csv, GreenthreadSafeIterator, \
-    GreenAsyncPile, quorum_size, parse_content_type, \
-    http_response_to_document_iters, document_iters_to_http_response_body
+
+from swift import gettext_ as _
 from swift.common.bufferedhttp import http_connect
 from swift.common.exceptions import ChunkReadTimeout, ChunkWriteTimeout, \
     ConnectionTimeout, RangeAlreadyComplete
@@ -47,11 +43,16 @@ from swift.common.http import is_informational, is_success, is_redirection, \
     is_server_error, HTTP_OK, HTTP_PARTIAL_CONTENT, HTTP_MULTIPLE_CHOICES, \
     HTTP_BAD_REQUEST, HTTP_NOT_FOUND, HTTP_SERVICE_UNAVAILABLE, \
     HTTP_INSUFFICIENT_STORAGE, HTTP_UNAUTHORIZED, HTTP_CONTINUE
-from swift.common.swob import Request, Response, HeaderKeyDict, Range, \
-    HTTPException, HTTPRequestedRangeNotSatisfiable, HTTPServiceUnavailable
 from swift.common.request_helpers import strip_sys_meta_prefix, \
     strip_user_meta_prefix, is_user_meta, is_sys_meta, is_sys_or_user_meta
 from swift.common.storage_policy import POLICIES
+from swift.common.swob import Request, Response, HeaderKeyDict, Range, \
+    HTTPException, HTTPRequestedRangeNotSatisfiable, HTTPServiceUnavailable
+from swift.common.utils import Timestamp, config_true_value, \
+    public, split_path, list_from_csv, GreenthreadSafeIterator, \
+    GreenAsyncPile, quorum_size, parse_content_type, \
+    http_response_to_document_iters, document_iters_to_http_response_body
+from swift.common.wsgi import make_pre_authed_env
 
 
 def update_headers(response, headers):
@@ -967,6 +968,7 @@ class ResumingGetter(object):
             return None
 
     def _get_source_and_node(self):
+        # 从给定的node_iter中获取可用的node及response
         self.statuses = []
         self.reasons = []
         self.bodies = []
@@ -982,6 +984,7 @@ class ResumingGetter(object):
             start_node_timing = time.time()
             try:
                 with ConnectionTimeout(self.app.conn_timeout):
+                    # 与一个node建立连接
                     conn = http_connect(
                         node['ip'], node['port'], node['device'],
                         self.partition, self.req_method, self.path,
@@ -990,18 +993,22 @@ class ResumingGetter(object):
                 self.app.set_node_timing(node, time.time() - start_node_timing)
 
                 with Timeout(node_timeout):
-                    # possible_source是一个 bufferedhttp response object，这个对象包含了各种元数据信息（包括最近数据最近修改的时间戳）
+                    # 从一个node获取response
+                    # possible_source是一个 buffered http response object，这个对象包含了各种元数据信息（包括最近数据最近修改的时间戳）
                     # proxy-server 的工作模式是（当设定X-Newest为True时，读取多份数据返回最新版本的数据）：
                     # 通过获取多个数据副本的元数据信息，然后找出最新的数据副本，读取最新的数据副本并返回。
                     possible_source = conn.getresponse()
                     # See NOTE: swift_conn at top of file about this.
                     possible_source.swift_conn = conn
             except (Exception, Timeout):
+                # 如果发生了connecttimeout，或者 nodetimeout，写入proxy.error,然后继续试下一个node
                 self.app.exception_occurred(
                     node, self.server_type,
                     _('Trying to %(method)s %(path)s') %
                     {'method': self.req_method, 'path': self.req_path})
                 continue
+            # 没有发生timeout的情况下，判断返回的状态是否正常，如果正常，把对应的connection和node添加到sources里面
+            # 如果不正常，只是更新statuses等的内容
             if self.is_good_source(possible_source):
                 # 404 if we know we don't have a synced copy
                 if not float(possible_source.getheader('X-PUT-Timestamp', 1)):
@@ -1050,6 +1057,7 @@ class ResumingGetter(object):
                          'body': self.bodies[-1][:1024],
                          'type': self.server_type})
 
+        # 会把node_iter轮询一遍，得到sources集合
         if sources:
             # 这里排序能够选出最新的数据，因为在http response的header中已经包含数据的时间戳信息
             # source_key的返回值为：
@@ -1135,6 +1143,7 @@ class GetOrHeadHandler(ResumingGetter):
             if source.getheader('Content-Type'):
                 res.charset = None
                 res.content_type = source.getheader('Content-Type')
+        # 如果没有working的source，就返回None
         return res
 
 
@@ -1548,6 +1557,7 @@ class Controller(object):
 
         if not res:
             # 如果不能获得请求的响应，则使用best_response获取一个响应。
+            # 在多个res的statuses中，通过裁决决定响应的内容。
             res = self.best_response(
                 req, handler.statuses, handler.reasons, handler.bodies,
                 '%s %s' % (server_type, req.method),

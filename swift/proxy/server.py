@@ -13,36 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # coding=utf-8
+import functools
+import itertools
 import mimetypes
 import os
 import socket
+import sys
 from random import shuffle
 from time import time
-import itertools
-import functools
-import sys
 
-from swift import gettext_ as _
 from eventlet import Timeout
+
 from swift import __canonical_version__ as swift_version
+from swift import gettext_ as _
 from swift.common import constraints
-from swift.common.storage_policy import POLICIES
+from swift.common.constraints import check_utf8, valid_api_version
+from swift.common.exceptions import APIVersionError
 from swift.common.ring import Ring
+from swift.common.storage_policy import POLICIES
+from swift.common.swob import HTTPBadRequest, HTTPForbidden, \
+    HTTPMethodNotAllowed, HTTPNotFound, HTTPPreconditionFailed, \
+    HTTPServerError, HTTPException, Request, HTTPServiceUnavailable
 from swift.common.utils import cache_from_env, get_logger, \
     get_remote_client, split_path, config_true_value, generate_trans_id, \
     affinity_key_function, affinity_locality_predicate, list_from_csv, \
     register_swift_info
-from swift.common.constraints import check_utf8, valid_api_version
 from swift.proxy.controllers import AccountController, ContainerController, \
     ObjectControllerRouter, InfoController
 from swift.proxy.controllers.base import get_container_info
-from swift.common.swob import HTTPBadRequest, HTTPForbidden, \
-    HTTPMethodNotAllowed, HTTPNotFound, HTTPPreconditionFailed, \
-    HTTPServerError, HTTPException, Request, HTTPServiceUnavailable
-from swift.common.exceptions import APIVersionError
-
-
-
 
 # List of entry points for mandatory middlewares.
 #
@@ -556,6 +554,7 @@ class Application(object):
                 if not self.error_limited(node):
                     nodes_left -= 1
                     if nodes_left <= 0:
+                        # if all nodes in primary nodes works normally, the node_iter only contains primary nodes
                         return
         handoffs = 0
         for node in handoff_nodes:
@@ -571,6 +570,8 @@ class Application(object):
                 if not self.error_limited(node):
                     nodes_left -= 1
                     if nodes_left <= 0:
+                        # if the primary nodes contain error_limited, use handoff node as alternative.
+                        # node_iter can be empty if all nodes are error_limited
                         return
 
     def exception_occurred(self, node, typ, additional_info,

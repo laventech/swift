@@ -19,21 +19,21 @@ from __future__ import print_function
 
 import errno
 import inspect
+import mimetools
 import os
 import signal
 import time
-import mimetools
-from swift import gettext_ as _
 from StringIO import StringIO
 from textwrap import dedent
+from urllib import unquote
 
 import eventlet
 import eventlet.debug
 from eventlet import greenio, GreenPool, sleep, wsgi, listen, Timeout
-from paste.deploy import loadwsgi
 from eventlet.green import socket, ssl, os as green_os
-from urllib import unquote
+from paste.deploy import loadwsgi
 
+from swift import gettext_ as _
 from swift.common import utils, constraints
 from swift.common.storage_policy import BindPortsCache
 from swift.common.swob import Request
@@ -397,6 +397,7 @@ def run_server(conf, logger, sock, global_conf=None):
     # timezones.
     os.environ['TZ'] = time.strftime("%z", time.gmtime())
 
+    # 前面的工作已经配置好需要的环境，在这里启动服务
     wsgi.HttpProtocol.default_request_version = "HTTP/1.0"
     # Turn off logging requests by the underlying WSGI software.
     wsgi.HttpProtocol.log_request = lambda *a: None
